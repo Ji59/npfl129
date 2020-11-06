@@ -17,49 +17,96 @@ parser.add_argument("--test_size", default=0.5, type=lambda x:int(x) if x.isdigi
 # If you add more arguments, ReCodEx will keep them with your default values.
 
 def main(args):
-    dataset = getattr(sklearn.datasets, "load_{}".format(args.dataset))()
+	dataset = getattr(sklearn.datasets, "load_{}".format(args.dataset))()
 
-    # TODO: Split the dataset into a train set and a test set.
-    # Use `sklearn.model_selection.train_test_split` method call, passing
-    # arguments `test_size=args.test_size, random_state=args.seed`.
+	# TODO: Split the dataset into a train set and a test set.
+	# Use `sklearn.model_selection.train_test_split` method call, passing
+	# arguments `test_size=args.test_size, random_state=args.seed`.
+	x_train, x_test, y_train, y_test = \
+		sklearn.model_selection.train_test_split(dataset.data, dataset.target, test_size=args.test_size,
+												 random_state=args.seed)
 
-    # TODO: Process the input columns in the following way:
-    #
-    # - if a column has only integer values, consider it a categorical column
-    #   (days in a week, dog breed, ...; in general integer values can also
-    #   represent numerical non-categorical values, but we use this assumption
-    #   for the sake of an exercise). Encode the values with one-hot encoding
-    #   using `sklearn.preprocessing.OneHotEncoder` (note that its output is by
-    #   default sparse, you can use `sparse=False` to generate dense output;
-    #   also use `handle_unknown="ignore"` to ignore missing values in test set).
-    #
-    # - for the rest of the columns, normalize their values so that they
-    #   have mean 0 and variance 1; use `sklearn.preprocessing.StandardScaler`.
-    #
-    # In the output, there should be first all the one-hot categorical features,
-    # and then the real-valued features. To process different dataset columns
-    # differently, you can use `sklearn.compose.ColumnTransformer`.
+	# TODO: Process the input columns in the following way:
+	#
+	# - if a column has only integer values, consider it a categorical column
+	#   (days in a week, dog breed, ...; in general integer values can also
+	#   represent numerical non-categorical values, but we use this assumption
+	#   for the sake of an exercise). Encode the values with one-hot encoding
+	#   using `sklearn.preprocessing.OneHotEncoder` (note that its output is by
+	#   default sparse, you can use `sparse=False` to generate dense output;
+	#   also use `handle_unknown="ignore"` to ignore missing values in test set).
+	#
+	# - for the rest of the columns, normalize their values so that they
+	#   have mean 0 and variance 1; use `sklearn.preprocessing.StandardScaler`.
+	#
+	# In the output, there should be first all the one-hot categorical features,
+	# and then the real-valued features. To process different dataset columns
+	# differently, you can use `sklearn.compose.ColumnTransformer`.
 
-    # TODO: Generate polynomial features of order 2 from the current features.
-    # If the input values are [a, b, c, d], you should generate
-    # [a^2, ab, ac, ad, b^2, bc, bd, c^2, cd, d^2]. You can generate such polynomial
-    # features either manually, or using
-    # `sklearn.preprocessing.PolynomialFeatures(2, include_bias=False)`.
+	int_col_bool = np.all(dataset.data == dataset.data.astype(np.int), axis=0)
+	int_col = [i for i in range(len(int_col_bool)) if int_col_bool[i]]
+	real_col = [i for i in range(len(int_col_bool)) if not int_col_bool[i]]
 
-    # TODO: You can wrap all the feature processing steps into one transformer
-    # by using `sklearn.pipeline.Pipeline`. Although not strictly needed, it is
-    # usually comfortable.
+	ct = sklearn.compose.ColumnTransformer(
+		[
+			("categorical_features", sklearn.preprocessing.OneHotEncoder(sparse=False, handle_unknown="ignore"), int_col),
+			("normalized_features", sklearn.preprocessing.StandardScaler(), real_col)
+		]
+	)
 
-    # TODO: Fit the feature processing steps on the training data.
-    # Then transform the training data into `train_data` (you can do both these
-    # steps using `fit_transform`), and transform testing data to `test_data`.
+	## My code
+	# one_hot_encoder = sklearn.preprocessing.OneHotEncoder(handle_unknown="ignore")
+	# scaler = sklearn.preprocessing.StandardScaler()
+	#
+	# int_data = np.array([]).reshape(len(dataset.data), 0)
+	# real_data = np.array([]).reshape(len(dataset.data), 0)
+	# for i in range(dataset.data.shape[1]):
+	# 	if np.array_equal(dataset.data[:, i], dataset.data[:, i].astype(int)):
+	# 		np.c_[int_data, dataset.data[:, i]]
+	# 	else:
+	# 		np.c_[real_data, dataset.data[:, i]]
+	#
+	# one_hot_encoder.fit_transform(int_data)
+	# scaler.fit_transform(real_data)
 
-    return train_data, test_data
+	# TODO: Generate polynomial features of order 2 from the current features.
+	# If the input values are [a, b, c, d], you should generate
+	# [a^2, ab, ac, ad, b^2, bc, bd, c^2, cd, d^2]. You can generate such polynomial
+	# features either manually, or using
+	# `sklearn.preprocessing.PolynomialFeatures(2, include_bias=False)`.
+
+	pol_features = sklearn.preprocessing.PolynomialFeatures(2, include_bias=False)
+
+	## My code
+	# sklearn.preprocessing.PolynomialFeatures(2, include_bias=False).transform(int_data)
+
+	# TODO: You can wrap all the feature processing steps into one transformer
+	# by using `sklearn.pipeline.Pipeline`. Although not strictly needed, it is
+	# usually comfortable.
+
+	pipe = sklearn.pipeline.Pipeline([('extract categorical, normalize other', ct), ('polynomial features', pol_features)])
+
+	# TODO: Fit the feature processing steps on the training data.
+	# Then transform the training data into `train_data` (you can do both these
+	# steps using `fit_transform`), and transform testing data to `test_data`.
+
+	pipe.fit(x_train)
+	train_data = pipe.transform(x_train)
+	test_data = pipe.transform(x_test)
+
+	## My code
+	# transformed_data = int_data
+	# np.c_[transformed_data, real_data]
+	#
+	# train_data, test_data, y_train, y_test = \
+	# 	sklearn.model_selection.train_test_split(dataset.data, dataset.target, test_size=args.test_size, random_state=args.seed)
+
+	return train_data, test_data
 
 
 if __name__ == "__main__":
-    args = parser.parse_args([] if "__file__" not in globals() else None)
-    train_data, test_data = main(args)
-    for dataset in [train_data, test_data]:
-        for line in range(min(dataset.shape[0], 5)):
-            print(" ".join("{:.4g}".format(dataset[line, column]) for column in range(min(dataset.shape[1], 60))))
+	args = parser.parse_args([] if "__file__" not in globals() else None)
+	train_data, test_data = main(args)
+	for dataset in [train_data, test_data]:
+		for line in range(min(dataset.shape[0], 5)):
+			print(" ".join("{:.4g}".format(dataset[line, column]) for column in range(min(dataset.shape[1], 60))))
