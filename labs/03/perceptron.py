@@ -25,6 +25,8 @@ def main(args):
 
     # TODO: Append a constant feature with value 1 to the end of every input data
 
+    data = np.c_[data, np.ones((len(data), 1))]
+
     # Generate initial perceptron weights
     weights = np.zeros(data.shape[1])
 
@@ -37,6 +39,12 @@ def main(args):
         # training data iteration, perform the required update to the `weights`
         # for incorrectly classified examples. If all training instances are
         # correctly classified, set `done=True`, otherwise set `done=False`.
+        done = True
+        for i in permutation:
+            y = np.transpose(weights) @ data[i]
+            if target[i] * y <= 0:
+                weights += target[i] * data[i]
+                done = False
 
         if args.plot and not done:
             import matplotlib.pyplot as plt
