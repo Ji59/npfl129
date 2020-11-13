@@ -7,6 +7,8 @@ import urllib.request
 import sys
 
 import numpy as np
+import sklearn
+import sklearn.neural_network
 
 class Dataset:
     """MNIST Dataset.
@@ -41,9 +43,15 @@ def main(args):
         # We are training a model.
         np.random.seed(args.seed)
         train = Dataset()
+        x = train.data
+        t = train.target
 
         # TODO: Train a model on the given dataset and store it in `model`.
-        model = None
+        model = sklearn.neural_network.MLPClassifier(hidden_layer_sizes=669, random_state=args.seed, max_iter=420, verbose=True)
+        model.fit(x, t)
+        t_predicted = model.predict(x)
+        # print(f"Train accuracy: {probability_equal(t, t_predicted) * 100:.2f}%")
+        print("Train accuracy: ", model.score(x, t))
 
         # If you trained one or more MLPs, you can use the following code
         # to compress it significantly (approximately 12 times). The snippet
@@ -64,7 +72,7 @@ def main(args):
             model = pickle.load(model_file)
 
         # TODO: Generate `predictions` with the test set predictions.
-        predictions = None
+        predictions = model.predict(test.data)
 
         return predictions
 
