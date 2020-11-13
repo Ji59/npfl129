@@ -41,6 +41,11 @@ parser.add_argument("--train_size", default=1000, type=lambda x:int(x) if x.isdi
 parser.add_argument("--weights", default="uniform", type=str, help="Weighting to use (uniform/inverse/softmax)")
 # If you add more arguments, ReCodEx will keep them with your default values.
 
+
+def distance(x, y, p):
+    return [np.power(np.sum(np.abs(np.power(x - y, p))), 1 / p)]
+
+
 def main(args):
     # Load MNIST data, scale it to [0, 1] and split it to train and test
     mnist = MNIST()
