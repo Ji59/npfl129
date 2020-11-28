@@ -12,8 +12,9 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.neural_network import MLPClassifier
 
 
-before = 5
-after = 3
+before = 4
+after = 4
+size = 100000
 
 
 class Dataset:
@@ -46,24 +47,6 @@ parser.add_argument("--seed", default=42, type=int, help="Random seed")
 parser.add_argument("--model_path", default="diacritization.model", type=str, help="Model path")
 
 
-def create_converter():
-	i = 0
-	out = {}
-	out['.'] = i
-	for c in "abcdefghijklmnopqrstuvwxyz" + Dataset.LETTERS_DIA:
-		if out.get(c) is None:
-			i += 1
-			out[c] = i
-	return out
-
-
-def convert_char(c):
-	return converter[c]
-
-
-converter = create_converter()
-
-
 def main(args):
 	if args.predict is None:
 		# We are training a model.
@@ -75,27 +58,29 @@ def main(args):
 
 		one_hot = get_one_hot()
 
+		# TODO: Train a model on the given dataset and store it in `model`.z
+		model = MLPClassifier(max_iter=420, learning_rate_init=0.003, learning_rate='adaptive', hidden_layer_sizes=(420, 107, 69	), verbose=True)
 
-
-		# TODO: Train a model on the given dataset and store it in `model`.
-		model = MLPClassifier()
-
+		data_size = features * (before + after + 1)
+		data = np.zeros((size, data_size))
+		targets = np.zeros(size)
+		n = 0
 		for i in range(len(data_words)):
-			for j in range(len(data_words[i])):
-				if data_words[i][j].lower() in Dataset.LETTERS_NODIA:
-					word = ""
-					target = ""
-					for k in range(j - before, j + after + 1):
-						if k < 0 or k >= len(data_words[i]):
-							word += '.'
-							target += '.'
-						else:
-							word += data_words[i][k].lower()
-							target += target_words[i][k].lower()
-					word_vect = one_hot.transform(str_to_byte_array(word)).reshape(-1, 1)
-					target_vect = one_hot.transform(str_to_byte_array(target)).reshape(-1, 1)
-					model.fit(word_vect, target_vect)
+			word_i = data_words[i]
+			len_word_i = len(word_i)
+			for j in range(len_word_i):
+				if word_i[j].lower() in Dataset.LETTERS_NODIA:
+					get_one_hot_vector(data, features, j, len_word_i, n, one_hot, word_i)
 
+					targets[n] = char_to_byte(target_words[i][j])
+					n += 1
+					if n >= data.shape[0]:
+						data = np.concatenate((data, np.zeros((size, data_size))), axis=0)
+						targets = np.append(targets, np.zeros(size))
+			if i % 3000 == 0:
+				print("{} / {}".format(i, len(data_words)))
+
+		model.fit(data[:n], targets[:n])
 
 		# Serialize the model.
 		with lzma.open(args.model_path, "wb") as model_file:
@@ -113,33 +98,103 @@ def main(args):
 
 		predictions = ""
 		one_hot = get_one_hot()
+		data_size = features * (before + after + 1)
 
 		words = test.data.split()
-		for word in words:
-			for i in range(len(word)):
-				if word[i] in Dataset.LETTERS_NODIA:
-					word = ""
-					for k in range(i - before, i + after + 1):
-						if k < 0 or k >= len(word):
-							word += '.'
-						else:
-							word += word[i].lower()
-					word_vect = one_hot.transform(str_to_byte_array(word)).reshape(-1, 1)
-					predictions.join(map(chr, one_hot.inverse_transform(model.predict(word_vect))[i]))
-				else:
-					predictions += word[i]
+		data = np.zeros((size, data_size))
 
+		n = 0
+		for i in range(len(words)):
+			word_i = words[i]
+			len_word_i = len(word_i)
+			for j in range(len_word_i):
+				if word_i[j].lower() in Dataset.LETTERS_NODIA:
+					get_one_hot_vector(data, features, j, len_word_i, n, one_hot, word_i)
+
+					n += 1
+					if n >= data.shape[0]:
+						data = np.concatenate((data, np.zeros((size, data_size))), axis=0)
+
+		predicted_all = model.predict(data)
+
+		n = 0
+		for i in range(len(words)):
+			word = words[i]
+			out = ""
+			for j in range(len(word)):
+				l = word[j]
+				if l.lower() in Dataset.LETTERS_NODIA:
+					lower = l.lower() == l
+
+					word_vect = np.zeros((1, data_size))
+					get_one_hot_vector(word_vect, features, j, len(word), 0, one_hot, word)
+					predicted = byte_to_char(predicted_all[n])
+					l = predicted if lower else predicted.upper()
+					n += 1
+				out += l
+			words[i] = out
+		predictions = " ".join(words)
+
+		print(predictions)
 		return predictions
+
+
+def get_one_hot_vector(data, features, j, len_word_i, n, one_hot, word_i):
+	l = before - j
+	for k in range(max(j - before, 0), min(j + after + 1, len_word_i)):
+		i = char_to_byte(word_i[k])
+		if i > 0:
+			data[n, (k + l) * features + i - 1] = 1
 
 
 def get_one_hot():
 	one_hot = OneHotEncoder(handle_unknown='ignore')
-	one_hot.fit(str_to_byte_array("abcdefghijklmnopqrstuvwxyz" + Dataset.LETTERS_DIA).reshape(-1, 1))
+	one_hot.fit(str_to_byte_array(letters).reshape(-1, 1))
 	return one_hot
 
 
+letters = "abcdefghijklmnopqrstuvwxyz"
+letters_dia = Dataset.LETTERS_DIA
+
+
+def create_converter():
+	i = 0
+	out = {'.': i}
+
+	for c in letters + letters_dia:
+		if out.get(c) is None:
+			i += 1
+			out[c] = i
+	return out
+
+
+converter = create_converter()
+features = len(letters)
+
+
+def create_inv_converter():
+	out = {0: '.'}
+	for l in letters + letters_dia:
+		i = converter[l]
+		out[i] = l
+	return out
+
+
+inv_converter = create_inv_converter()
+
+
+def char_to_byte(c):
+	value = converter.get(c.lower())
+	return 0 if value is None else value
+
+
 def str_to_byte_array(s):
-	return np.array([convert_char(c) for c in s]).reshape(-1, 1)
+	return np.array([char_to_byte(c) for c in s]).reshape(-1, 1)
+
+
+def byte_to_char(b):
+	c = inv_converter.get(int(b))
+	return None if c is None else c
 
 
 if __name__ == "__main__":
