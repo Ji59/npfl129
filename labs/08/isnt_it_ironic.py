@@ -11,7 +11,6 @@ import numpy as np
 import random
 from sklearn.naive_bayes import GaussianNB;
 
-
 KONSTANTA = 100000
 
 
@@ -79,7 +78,6 @@ def main(args):
 		# TODO: Train a model on the given dataset and store it in `model`.
 		model = GaussianNB();
 		model.fit(data.reshape(-1, 1), target);
-
 
 		# Serialize the model.
 		with lzma.open(args.model_path, "wb") as model_file:

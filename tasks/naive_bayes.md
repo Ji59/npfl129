@@ -4,8 +4,8 @@
 #### Examples: naive_bayes_examples
 
 Using the [naive_bayes.py](https://github.com/ufal/npfl129/tree/master/labs/08/naive_bayes.py)
-template, train a naive Bayes classifier. Implement a Gaussian NB,
-multinomial NB and Bernoulli NB classifiers.
+template, implement a naive Bayes classifier (without using the `sklearn` one).
+Support all of Gaussian NB, multinomial NB and Bernoulli NB.
 
 #### Examples Start: naive_bayes_examples
 Note that your results may sometimes be slightly different (for example because of varying floating point arithmetic on your CPU).
@@ -29,8 +29,8 @@ Test accuracy 84.32%
 ```
 Test accuracy 89.66%
 ```
-- `python3 naive_bayes.py --classes=10 --naive_bayes_type=gaussian --alpha=10`
+- `python3 naive_bayes.py --classes=10 --naive_bayes_type=gaussian --alpha=10 --seed=41`
 ```
-Test accuracy 91.32%
+Test accuracy 91.55%
 ```
 #### Examples End:
