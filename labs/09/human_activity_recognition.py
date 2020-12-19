@@ -5,10 +5,11 @@ import pickle
 import os
 import urllib.request
 import sys
-import zipfile
 
 import numpy as np
 import pandas as pd
+
+from sklearn.ensemble import RandomForestClassifier
 
 
 class Dataset:
@@ -42,7 +43,12 @@ def main(args):
         train = Dataset()
 
         # TODO: Train a model on the given dataset and store it in `model`.
-        model = None
+        model = RandomForestClassifier(n_estimators=980, criterion="entropy", n_jobs=8)
+
+        model.fit(train.data.to_numpy(), train.target)
+
+        prediction = model.predict(train.data.to_numpy())
+        print(np.sum([1 if train.target[i] == prediction[i] else 0 for i in range(len(train.target))]) / len(train.target))
 
         # Serialize the model.
         with lzma.open(args.model_path, "wb") as model_file:
@@ -57,7 +63,7 @@ def main(args):
 
         # TODO: Generate `predictions` with the test set predictions, either
         # as a Python list of a NumPy array.
-        predictions = None
+        predictions = model.predict(test.data.to_numpy())
 
         return predictions
 
