@@ -116,7 +116,7 @@ class NystroemTransformer(sklearn.base.TransformerMixin):
 		self._samples = X[indices]
 		kernel = self._rbf_kernel(self._samples, self._samples)
 		u, s, v_t = np.linalg.svd(kernel, hermitian=True)
-		d = np.diag(np.power(s + 1e-12, -1/2))
+		d = np.diag(np.power(s + 1e-12, -1 / 2))
 		self._v = u @ d @ v_t
 
 		return self
